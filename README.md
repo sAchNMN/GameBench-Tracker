@@ -1,5 +1,11 @@
 # GameBench Tracker
 
+![Last Commit](https://img.shields.io/github/last-commit/sAchNMN/GameBench-Tracker)
+![Repo Size](https://img.shields.io/github/repo-size/sAchNMN/GameBench-Tracker)
+![Java](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.0-6DB33F?logo=springboot&logoColor=white)
+![Phase](https://img.shields.io/badge/Phase-0%20Docs-informational)
+
 GameBench Tracker 是一个本地单用户的游戏性能记录工具。
 
 它用于记录、管理、对比和导出游戏 Benchmark 结果。它不是实时性能监控工具，也不负责采集游戏运行时数据。
