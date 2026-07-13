@@ -1,20 +1,44 @@
-# PROJECT_MAP
+﻿# PROJECT_MAP
 
 ## 当前实际目录
 
-当前只允许存在文档和工具目录。
+当前已存在 Phase 0 文档和最小 Spring Boot 后端骨架。
 
-已规划但尚未创建：
+当前已存在：
 
-- `src/`
+```text
+.
+├── pom.xml
+├── src
+│   ├── main
+│   │   ├── java
+│   │   │   └── com/gamebench/tracker/GameBenchTrackerApplication.java
+│   │   └── resources/application.yml
+│   └── test
+│       └── java/com/gamebench/tracker/GameBenchTrackerApplicationTests.java
+├── docs
+├── README.md
+├── AGENTS.md
+├── PROJECT_MAP.md
+├── HANDOFF.md
+├── ERROR_LOG.md
+├── CHECKLIST.md
+└── .gitignore
+```
+
+尚未创建：
+
 - `frontend/`
-- `pom.xml`
 - `package.json`
 - `vite.config.ts`
 
-这些内容属于后续任务，不在 Phase 0 执行。
+尚未创建任何 Controller、Service、Mapper、Entity、DTO、VO、converter。
+
+当前没有 SQLite 配置、SQL 文件或数据库文件。
 
 ## 规划后的后端结构
+
+以下是未来规划结构，不代表当前已经创建。
 
 ```text
 src/main/java/com/gamebench/tracker
@@ -47,6 +71,8 @@ src/main/java/com/gamebench/tracker
 - `util`：CSV、BigDecimal、时间工具。
 
 ## 规划后的前端结构
+
+以下是未来规划结构，不代表当前已经创建。
 
 ```text
 frontend/src

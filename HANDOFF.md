@@ -1,16 +1,21 @@
-﻿# HANDOFF
+# HANDOFF
 
 ## 当前状态
 
 已完成 Phase 0 文档。
 
-Git 仓库已初始化。  
-已建立纯文档基线提交。  
-尚未初始化 Spring Boot 项目。  
-尚未初始化 Vue 项目。  
-尚未写业务代码。  
-尚未执行 SQL。  
+Git 仓库已初始化。
+已建立纯文档基线提交。
+T006 已完成。
+T006.1 诊断已完成。
+Spring Boot 空项目已初始化。
+尚未初始化 Vue 项目。
+尚未写业务代码。
+当前无业务代码。
+尚未执行 SQL。
 尚未创建 SQLite 数据库。
+当前无数据库。
+当前无前端。
 
 ## 本阶段已完成
 
@@ -27,6 +32,8 @@ Git 仓库已初始化。
 - 创建错误日志模板。
 - 创建 `.gitignore`。
 - 建立 Phase 0 纯文档基线提交。
+- 创建最小 Spring Boot 后端空项目。
+- 创建 Spring Boot ApplicationContext 加载测试。
 
 ## 关键设计结论
 
@@ -45,9 +52,16 @@ Git 仓库已初始化。
 - P12 只做统一性审计和遗漏修复。
 - 自动化测试随功能阶段同步完成。
 
+## 环境问题
+
+已定位：原项目路径包含中文，Spring Boot Maven Plugin 在 `spring-boot:run` fork classpath 中把路径写成乱码，导致子进程找不到 `com.gamebench.tracker.GameBenchTrackerApplication`。
+
+英文路径副本中，`mvn clean test` 和 `mvn spring-boot:run` 均成功。
+
+未解决：默认 Maven 本地仓库 `%USERPROFILE%\.m2` ACL 显示当前用户 FullControl，但普通文件写入测试失败。当前仍需临时使用 `%TEMP%\gamebench-m2` 或由用户手动修复 `.m2` 写入权限。
+
 ## 尚未完成
 
-- T006 初始化后端空项目。
 - T007 建立统一响应结构。
 - T008 建立全局异常和校验骨架。
 - T009 接入 SQLite 基础。
@@ -55,9 +69,9 @@ Git 仓库已初始化。
 
 ## 下一步
 
-下一步只能建议执行 T006：初始化后端空项目。
+下一步只能建议执行 T007：建立统一响应和错误码基础结构。
 
-不要自动执行 T006。
+不要自动执行 T007。
 
 ## 接手提示
 
@@ -69,4 +83,4 @@ Git 仓库已初始化。
 4. `docs/development-roadmap.md`
 5. `docs/test-plan.md`
 
-下一步任务是 T006。执行 T006 前先运行 `git status --short`，确认工作区干净。
+下一步任务是 T007。执行 T007 前先运行 `git status --short`，确认工作区状态。
