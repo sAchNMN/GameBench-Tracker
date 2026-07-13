@@ -1,5 +1,19 @@
 # 测试计划
 
+## 当前已完成阶段结果
+
+后端共有 62 个 JUnit 5 测试，`mvn "-Dmaven.repo.local=G:\Code\gamebench-tracker\MavenRepo" clean test` 通过。
+
+`GameControllerIntegrationTest` 覆盖游戏 CRUD；`TestSceneControllerIntegrationTest` 覆盖场景创建、游戏归属、同游戏重名冲突、按游戏列表、时长校验、编辑、删除和删除游戏级联场景。真实运行库已验证重启后仍能读取 `CS2 / Steam` 与其场景。
+
+`ConfigTemplateControllerIntegrationTest` 覆盖完整模板持久化、不存在游戏、同游戏模板重名冲突、功耗限制边界、按游戏列表、编辑、删除和删除游戏级联模板。
+
+前端未配置测试脚本；`npm.cmd run build` 已通过类型检查和 Vite 生产构建。
+
+## 后续测试规范
+
+
+
 ## 测试原则
 
 自动化测试必须随功能阶段同步完成。
@@ -7,6 +21,8 @@
 不得把所有测试推迟到 P14。
 
 P14 只做全量回归、补漏和覆盖审计。
+
+
 
 ## 后端测试
 
@@ -21,6 +37,8 @@ P14 只做全量回归、补漏和覆盖审计。
 
 删除功能必须同步测试关联数据策略。
 
+
+
 ## 前端测试
 
 前端功能至少覆盖：
@@ -33,6 +51,8 @@ P14 只做全量回归、补漏和覆盖审计。
 - 提交期间按钮禁用。
 - 对比选择限制。
 - 图表无数据状态。
+
+
 
 ## 测试记录校验
 
@@ -50,6 +70,8 @@ P14 只做全量回归、补漏和覆盖审计。
 - 其他 FPS 指标不能为负数。
 - `gpu_power_limit_percent` 允许负数、0 和正数。
 - `gpu_power_limit_percent` 小于 -100 或大于 100 时失败。
+
+
 
 ## 对比计算固定数据
 
@@ -77,6 +99,8 @@ P14 只做全量回归、补漏和覆盖审计。
 - B 的 FPS/W 为 0.75。
 - B 的能效相对 A 提升 50%。
 
+
+
 ## 对比边界测试
 
 必须覆盖：
@@ -91,6 +115,8 @@ P14 只做全量回归、补漏和覆盖审计。
 - 小数精度。
 - 两条不同游戏记录不能对比。
 
+
+
 ## CSV 导出测试
 
 必须覆盖：
@@ -103,6 +129,27 @@ P14 只做全量回归、补漏和覆盖审计。
 - 小数保留 2 位。
 - 文件名包含业务范围和时间。
 - 导出失败返回统一错误。
+
+
+
+## 全局异常处理测试
+
+T008.2B 使用普通 JUnit 5 单元测试，直接调用 GlobalExceptionHandler，覆盖：
+
+- ApplicationException 的 409、404 响应与 details 保留。
+- JSON 解析错误的 400 响应和解析器消息隔离。
+- 未预期异常的 500 响应和异常消息隔离。
+- 所有失败响应的 success、data、error 与 timestamp 约束。
+
+T008.3 使用 WebMvcTest、MockMvc 与 test 源码中的 ValidationProbeController 验证：
+
+- POST /test/validation/body：合法请求、MethodArgumentNotValidException、JSON 解析错误。
+- GET /test/validation/query：HandlerMethodValidationException、缺参和类型错误。
+- GET /test/validation/path/{id}：HandlerMethodValidationException。
+- GET /test/errors/application、/test/errors/unexpected：应用异常与兜底异常。
+- resolvedException 实际类型、统一 JSON 响应和 ISO 8601 timestamp。
+
+游戏 API 已有生产 Controller 和 SQLite 集成测试；ValidationProbeController 仍只位于 test 源码。
 
 ## 回归检查
 

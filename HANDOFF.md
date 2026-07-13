@@ -2,85 +2,32 @@
 
 ## 当前状态
 
-已完成 Phase 0 文档。
+稳定基线为 `2b7bcef feat(scene): add test scene management`。
 
-Git 仓库已初始化。
-已建立纯文档基线提交。
-T006 已完成。
-T006.1 诊断已完成。
-Spring Boot 空项目已初始化。
-尚未初始化 Vue 项目。
-尚未写业务代码。
-当前无业务代码。
-尚未执行 SQL。
-尚未创建 SQLite 数据库。
-当前无数据库。
-当前无前端。
+阶段 A、B 已完成并提交。阶段 C 的配置模板后端已完成，待本次提交。
 
-## 本阶段已完成
+- SQLite、MyBatis-Plus 已接入；SQLite 外键已启用。
+- `schema.sql` 已创建 `game`、`test_scene`、`config_template` 及索引。
+- 已完成游戏、测试场景与配置模板的 CRUD API。
+- 模板必须归属现有游戏；模板名称在同一游戏内唯一。
+- `gpu_power_limit_percent` 允许 -100 到 100；频率和电压只能为空或非负数。
+- 删除游戏会级联删除场景和配置模板。
+- 后端 `mvn "-Dmaven.repo.local=G:\Code\gamebench-tracker\MavenRepo" clean test`：62 个测试通过。
+- 前端游戏和场景页面构建已通过；配置模板前端页面尚未创建。
 
-- 创建项目 README。
-- 创建 AI 开发规则。
-- 创建项目结构规划。
-- 创建需求与边界文档。
-- 创建架构文档。
-- 创建数据库 SQL 草案。
-- 创建 API 契约文档。
-- 创建开发路线。
-- 创建测试计划。
-- 创建检查清单。
-- 创建错误日志模板。
-- 创建 `.gitignore`。
-- 建立 Phase 0 纯文档基线提交。
-- 创建最小 Spring Boot 后端空项目。
-- 创建 Spring Boot ApplicationContext 加载测试。
+## 本次提交
 
-## 关键设计结论
+- `config_template`：Entity、Mapper、DTO、VO、Service、Controller 与 SQLite schema。
+- 模板错误码 `TEMPLATE_NOT_FOUND` 及 HTTP 404 映射。
+- `ConfigTemplateControllerIntegrationTest`：完整字段持久化、不存在游戏、同游戏重名、功耗边界、按游戏列表、编辑、删除和游戏级联删除。
+- README、架构、API、数据库、路线和测试文档同步到实际状态。
 
-- `game` 表不保存 `version`。
-- `game` 唯一约束为 `UNIQUE(name, platform)`。
-- `platform` 为 `NOT NULL DEFAULT ''`。
-- 游戏版本只保存在 `benchmark_record.game_version`。
-- 显卡功耗限制统一使用 `gpu_power_limit_percent`。
-- `gpu_power_limit_percent` 允许 -100 到 100。
-- 实际平均功耗使用 `gpu_avg_power_w`。
-- `average_fps` 必填，且必须大于 0。
-- 新增测试记录时 `scene_id` 必填。
-- 场景和模板都要复制快照到历史记录。
-- DELETE 接口返回 HTTP 200 和统一 `ApiResponse`。
-- 统一响应、错误码、全局异常、Jakarta Validation、数据库异常转换在基础阶段完成。
-- P12 只做统一性审计和遗漏修复。
-- 自动化测试随功能阶段同步完成。
+## 运行与数据
 
-## 环境问题
+运行数据库为项目根目录 `gamebench-tracker.db`，不提交。
 
-已定位：原项目路径包含中文，Spring Boot Maven Plugin 在 `spring-boot:run` fork classpath 中把路径写成乱码，导致子进程找不到 `com.gamebench.tracker.GameBenchTrackerApplication`。
-
-英文路径副本中，`mvn clean test` 和 `mvn spring-boot:run` 均成功。
-
-未解决：默认 Maven 本地仓库 `%USERPROFILE%\.m2` ACL 显示当前用户 FullControl，但普通文件写入测试失败。当前仍需临时使用 `%TEMP%\gamebench-m2` 或由用户手动修复 `.m2` 写入权限。
-
-## 尚未完成
-
-- T007 建立统一响应结构。
-- T008 建立全局异常和校验骨架。
-- T009 接入 SQLite 基础。
-- T010 以后所有后端和前端功能任务。
+当前开发机使用 `G:\Code\gamebench-tracker\MavenRepo` 作为 Maven 本地仓库。默认 `%USERPROFILE%\.m2` 写入问题未处理，不影响项目验证。
 
 ## 下一步
 
-下一步只能建议执行 T007：建立统一响应和错误码基础结构。
-
-不要自动执行 T007。
-
-## 接手提示
-
-接手前先读：
-
-1. `docs/requirements.md`
-2. `docs/database.md`
-3. `docs/api.md`
-4. `docs/development-roadmap.md`
-5. `docs/test-plan.md`
-
-下一步任务是 T007。执行 T007 前先运行 `git status --short`，确认工作区状态。
+阶段 C 前端部分：从游戏页面进入配置模板管理，完成模板新增、编辑、删除确认、空/加载/错误状态和功耗范围前端校验。

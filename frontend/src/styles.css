@@ -1,0 +1,16 @@
+:root { font-family: Inter, "Microsoft YaHei", sans-serif; color: #e8ecff; background: #10131f; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; background: radial-gradient(circle at top right, #26386d 0, #10131f 42rem); }
+button, input, textarea { font: inherit; }
+.page-shell { max-width: 1180px; margin: 0 auto; padding: 52px 24px; }
+.hero { display: flex; justify-content: space-between; gap: 32px; align-items: end; margin-bottom: 28px; }
+.eyebrow { color: #8ba5ff; font-size: 12px; letter-spacing: .16em; margin: 0 0 10px; }
+h1 { margin: 0; font-size: clamp(32px, 5vw, 52px); letter-spacing: -.04em; }
+.hero p:not(.eyebrow) { color: #b8c1df; margin: 12px 0 0; }
+.panel { background: rgba(23, 28, 47, .9); border: 1px solid #354269; border-radius: 18px; padding: 20px; box-shadow: 0 24px 70px rgba(0,0,0,.3); }
+.toolbar { display: flex; gap: 12px; margin-bottom: 18px; max-width: 460px; }
+.el-table { --el-table-bg-color: transparent; --el-table-tr-bg-color: transparent; --el-table-header-bg-color: #202844; --el-table-text-color: #e8ecff; --el-table-header-text-color: #b8c1df; --el-table-border-color: #354269; --el-fill-color-lighter: #202844; }
+.el-pagination { margin-top: 20px; justify-content: flex-end; }
+@media (max-width: 640px) { .page-shell { padding: 30px 14px; } .hero { align-items: start; flex-direction: column; } .toolbar { max-width: none; } }
+.hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.duration-input { width: 180px; }

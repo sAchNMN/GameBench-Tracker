@@ -1,4 +1,4 @@
-﻿# Java / Maven
+# Java / Maven
 target/
 *.class
 *.jar
@@ -41,3 +41,6 @@ desktop.ini
 *.bak
 *.swp
 *~
+
+# Project-local Maven cache
+MavenRepo/

@@ -1,4 +1,14 @@
-# SQLite SQL 草案
+# SQLite 数据库设计
+
+## 当前实施状态
+
+`src/main/resources/schema.sql` 当前实际创建 `game`、`test_scene`、`config_template` 及其索引。`game` 使用 `UNIQUE(name, platform)`，`platform` 为 `NOT NULL DEFAULT ''`；`test_scene` 使用 `UNIQUE(game_id, name)`、可选正数 `duration_seconds` 和 `ON DELETE CASCADE` 外键；`config_template` 使用 `UNIQUE(game_id, name)`、布尔开关约束、非负频率/电压约束、`gpu_power_limit_percent` 的 -100 到 100 约束和 `ON DELETE CASCADE` 外键。创建和更新时间由 SQLite 以 UTC ISO 8601 文本生成。
+
+运行库位于项目根目录 `gamebench-tracker.db`，已被 Git 忽略。测试使用独立共享内存 SQLite。
+
+下面保留完整结构规划。`config_template` 已写入运行 schema；`benchmark_record` 尚未写入，必须在对应纵向切片完成时创建。
+
+## 全量数据库规划（后续表尚未创建）
 
 ```sql
 PRAGMA foreign_keys = ON;

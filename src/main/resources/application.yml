@@ -2,3 +2,16 @@ spring:
   application:
     name: gamebench-tracker
   mandatory-file-encoding: UTF-8
+  datasource:
+    url: jdbc:sqlite:gamebench-tracker.db
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      connection-init-sql: PRAGMA foreign_keys = ON
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true

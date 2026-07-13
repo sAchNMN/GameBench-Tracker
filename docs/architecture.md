@@ -1,139 +1,50 @@
 # 架构设计
 
-## 总体结构
+## 当前结构
 
 ```text
-Vue 3 + TypeScript
+Vue 3 + TypeScript + Element Plus
   -> HTTP JSON
   -> Spring Boot 3
+  -> Controller -> Service -> Mapper
   -> MyBatis-Plus
-  -> SQLite 本地数据库文件
+  -> SQLite 本地文件
 ```
 
-最终用户只需要启动一个 Java 程序。
+阶段 A、B 已实现游戏与测试场景管理链路；阶段 C 已实现配置模板后端链路。前端开发服务器将 `/api` 代理到 Spring Boot。
 
-Vue 构建后的静态资源由 Spring Boot 提供。
+## 分层职责
 
-## 后端分层
+- `GameController`：绑定 HTTP 参数、返回 HTTP 状态和 `ApiResponse`。
+- `GameService`：规范化输入、检查存在性、创建、分页查询、更新和删除。
+- `GameMapper`：通过 MyBatis-Plus 访问 `game`。
+- `Game`：映射数据库行；`GameSaveRequest` 与 `GameResponse` 分离 HTTP 输入输出。
+- `GlobalExceptionHandler`：统一处理校验、应用异常和 SQLite 唯一约束错误，避免泄漏内部信息。
+- `TestSceneController`、`TestSceneService`、`TestSceneMapper`：场景必须隶属现有游戏；场景名在同一游戏内唯一。
+- `ConfigTemplateController`、`ConfigTemplateService`、`ConfigTemplateMapper`：模板必须隶属现有游戏；模板名在同一游戏内唯一；功耗限制为 -100 到 100。
+
+## 已实现数据流
 
 ```text
-controller
-service
-service.impl
-mapper
-entity
-dto
-vo
-converter
-exception
-validation
-config
-util
+游戏表单
+  -> POST /api/games
+  -> GameController
+  -> GameService
+  -> GameMapper
+  -> SQLite
+  -> ApiResponse<GameResponse>
 ```
 
-职责：
+游戏、场景和配置模板的列表、详情、编辑和删除均走同一分层。删除游戏时，SQLite 外键级联删除场景和模板；未来记录表删除场景或模板时会使用 `SET NULL` 保留快照。
 
-- Controller 不写业务逻辑。
-- Service 负责业务规则、快照复制、删除策略、对比计算。
-- Mapper 只负责数据库访问。
-- Entity 不直接作为全部接口请求和响应对象。
-- DTO 用于请求入参。
-- VO 用于响应出参。
-- Converter 处理对象转换。
-- Exception 处理业务异常和错误码。
-- Validation 处理自定义参数校验。
-- Config 处理 SQLite、时间、静态资源等配置。
-- Util 处理 CSV、BigDecimal、时间格式等工具。
+## 时间与数据
 
-## 基础设施提前完成
+SQLite 默认时间使用 UTC；更新时由应用写入 UTC `Instant`。API 序列化为 ISO 8601。
 
-以下内容在项目基础阶段完成，不推迟到后期：
+生产数据库为项目根目录 `gamebench-tracker.db`。测试配置使用独立的共享内存 SQLite 数据库。
 
-- `ApiResponse`。
-- `ErrorCode`。
-- 全局异常处理。
-- Jakarta Validation。
-- 数据库异常转换。
-- 日期时间格式统一。
+## 未实现
 
-P12 只做统一性审计和遗漏修复，不首次建立异常体系。
+配置模板前端页面、性能记录、对比、图表、CSV、静态前端资源托管和应用启动器仍未实现。
 
-## 前端结构
-
-```text
-frontend/src
-├── api
-├── views
-├── components
-├── router
-├── stores
-├── types
-├── utils
-└── composables
-```
-
-页面规划：
-
-- 首页。
-- 游戏列表。
-- 游戏详情。
-- 测试场景管理。
-- 配置模板管理。
-- 测试记录列表。
-- 新增测试记录。
-- 编辑测试记录。
-- 双记录对比。
-- CSV 导出。
-
-## 前端状态要求
-
-每个页面至少处理：
-
-- 加载状态。
-- 空状态。
-- 错误状态。
-- 删除确认。
-- 表单校验。
-- 提交中按钮禁用。
-
-## 关键数据流
-
-新增测试记录：
-
-```text
-前端选择 game_id 和 scene_id
-  -> Controller 接收 DTO
-  -> Service 校验场景存在
-  -> Service 校验场景属于游戏
-  -> Service 复制场景快照
-  -> Service 复制配置模板快照
-  -> Mapper 保存 benchmark_record
-```
-
-双记录对比：
-
-```text
-前端选择两条记录
-  -> Service 校验两条记录存在
-  -> Service 校验同属一个游戏
-  -> BigDecimal 计算变化率和 FPS/W
-  -> 返回对比 VO
-  -> 前端表格和 ECharts 展示
-```
-
-## 性能和资源约束
-
-- 不做后台持续轮询。
-- 不每秒刷新接口。
-- 不后台扫描文件。
-- 不自动读取硬件传感器。
-- 不实时采集 FPS。
-- 不定时写数据库。
-- 不写高频日志。
-- 用户关闭软件后，Java 进程必须退出。
-
-## 程序退出模型
-
-不设计公开的无保护 shutdown HTTP 接口。
-
-规划采用显式启动器或启动窗口控制 Java 进程生命周期。用户关闭启动器或主窗口时，由启动器负责停止后端进程。
+不设计公共 shutdown HTTP 接口。
