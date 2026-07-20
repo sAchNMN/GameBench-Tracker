@@ -10,6 +10,7 @@ public enum ErrorCode {
     GAME_NOT_FOUND("GAME_NOT_FOUND", "游戏不存在"),
     SCENE_NOT_FOUND("SCENE_NOT_FOUND", "测试场景不存在"),
     TEMPLATE_NOT_FOUND("TEMPLATE_NOT_FOUND", "配置模板不存在"),
+    RECORD_NOT_FOUND("RECORD_NOT_FOUND", "性能记录不存在"),
     CONFLICT("CONFLICT", "数据冲突"),
     INTERNAL_ERROR("INTERNAL_ERROR", "服务器内部错误");
 

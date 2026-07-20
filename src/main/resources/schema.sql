@@ -55,3 +55,35 @@ CREATE TABLE IF NOT EXISTS config_template (
 );
 
 CREATE INDEX IF NOT EXISTS idx_template_game_id ON config_template(game_id);
+
+CREATE TABLE IF NOT EXISTS benchmark_record (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  game_id INTEGER NOT NULL,
+  scene_id INTEGER,
+  template_id INTEGER,
+  recorded_at TEXT,
+  avg_fps NUMERIC,
+  min_fps NUMERIC,
+  gpu_temp_celsius NUMERIC,
+  cpu_temp_celsius NUMERIC,
+  gpu_power_watt NUMERIC,
+  cpu_usage_percent NUMERIC,
+  frame_time_ms NUMERIC,
+  notes TEXT,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  CHECK (avg_fps IS NULL OR avg_fps > 0),
+  CHECK (min_fps IS NULL OR min_fps > 0),
+  CHECK (gpu_temp_celsius IS NULL OR gpu_temp_celsius >= -273.15),
+  CHECK (cpu_temp_celsius IS NULL OR cpu_temp_celsius >= -273.15),
+  CHECK (gpu_power_watt IS NULL OR gpu_power_watt >= 0),
+  CHECK (cpu_usage_percent IS NULL OR (cpu_usage_percent >= 0 AND cpu_usage_percent <= 100)),
+  CHECK (frame_time_ms IS NULL OR frame_time_ms > 0),
+  FOREIGN KEY (game_id) REFERENCES game(id) ON DELETE CASCADE,
+  FOREIGN KEY (scene_id) REFERENCES test_scene(id) ON DELETE SET NULL,
+  FOREIGN KEY (template_id) REFERENCES config_template(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_record_game_id ON benchmark_record(game_id);
+CREATE INDEX IF NOT EXISTS idx_record_scene_id ON benchmark_record(scene_id);
+CREATE INDEX IF NOT EXISTS idx_record_template_id ON benchmark_record(template_id);

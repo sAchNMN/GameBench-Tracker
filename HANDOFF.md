@@ -46,9 +46,21 @@
   - surefire `argLine` 使用 `@{argLine}` 承接 JaCoCo agent。
 - **ArchUnit**（`architecture/ModuleBoundaryTest.java`）：声明式模块边界护栏——Controller 不直连 Mapper、common 不反向依赖 game、game 内不向上依赖 controller。
 
-测试合计 **65 通过 / 0 失败 / 0 错误**。
+测试合计 **74 通过 / 0 失败 / 0 错误**（含新增 benchmark_record 模块 9 个集成测试）。
 
 ### 门禁构建命令（项目路径含中文/空格，用临时本地仓库）
 ```
 "C:/Program Files/Java/jdk-21.0.11/bin/java" -cp "C:/tools/maven-fixed/apache-maven-3.9.16/boot/plexus-classworlds-2.11.0.jar" -Dmaven.home=C:/tools/maven-fixed/apache-maven-3.9.16 -Dclassworlds.conf=C:/tools/maven-fixed/apache-maven-3.9.16/bin/m2.conf "-Dmaven.multiModuleProjectDirectory=G:/桌面/CODE/GameBench Tracker" -Dmaven.repo.local=C:/Users/34759/AppData/Local/Temp/gamebench-m2 org.codehaus.plexus.classworlds.launcher.Launcher -B verify
+
+---
+
+## 性能记录模块 benchmark_record（2026-07-20 追加）
+
+GameBench Tracker 的核心数据模块——记录游戏实测性能（FPS / 温度 / 功耗 / CPU 占用）。复用现有统一响应、jakarta 校验、统一异常与 ArchUnit 护栏范式。
+
+- `schema.sql`：`benchmark_record` 表。`game_id` 必填 FK→`game` ON DELETE CASCADE；`scene_id`/`template_id` 可选 FK（→`test_scene`/`config_template`）ON DELETE SET NULL；数值 CHECK 约束（`avg_fps`/`min_fps`>0、`gpu_power_watt`≥0、`cpu_usage_percent` 0–100、温度/帧时间≥0）+ 索引。
+- 文件：`BenchmarkRecord`(Entity) / `BenchmarkRecordMapper` / `BenchmarkRecordService`(CRUD + requireGame/requireRecord + 可选 scene/template 存在性校验) / `BenchmarkRecordController`(`POST /api/games/{gameId}/records`、`GET /api/games/{gameId}/records`、`GET|PUT|DELETE /api/records/{id}`) / `BenchmarkRecordSaveRequest`(DTO，jakarta 校验) / `BenchmarkRecordResponse`(VO)。
+- `ErrorCode.RECORD_NOT_FOUND` 已登记并映射到 HTTP 404。
+- `BenchmarkRecordControllerIntegrationTest`：9 个用例覆盖创建持久化、未知游戏、记录不存在、跨游戏隔离、字段校验边界、可选关联存在性、更新删除。
+- `mvn verify` 全绿：74 测试通过，Checkstyle/SpotBugs/JaCoCo 三道门禁通过。
 ```

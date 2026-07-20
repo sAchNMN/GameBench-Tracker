@@ -16,7 +16,7 @@ public final class ErrorCodeHttpStatusMapper {
     public static HttpStatus toHttpStatus(ErrorCode errorCode) {
         return switch (Objects.requireNonNull(errorCode, "errorCode must not be null")) {
             case INVALID_REQUEST, VALIDATION_FAILED -> HttpStatus.BAD_REQUEST;
-            case RESOURCE_NOT_FOUND, GAME_NOT_FOUND, SCENE_NOT_FOUND, TEMPLATE_NOT_FOUND -> HttpStatus.NOT_FOUND;
+            case RESOURCE_NOT_FOUND, GAME_NOT_FOUND, SCENE_NOT_FOUND, TEMPLATE_NOT_FOUND, RECORD_NOT_FOUND -> HttpStatus.NOT_FOUND;
             case CONFLICT -> HttpStatus.CONFLICT;
             case INTERNAL_ERROR -> HttpStatus.INTERNAL_SERVER_ERROR;
         };
