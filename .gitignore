@@ -44,3 +44,6 @@ desktop.ini
 
 # Project-local Maven cache
 MavenRepo/
+
+# AI assistant workspace data (not project source)
+.workbuddy/

@@ -31,3 +31,24 @@
 ## 下一步
 
 阶段 C 前端部分：从游戏页面进入配置模板管理，完成模板新增、编辑、删除确认、空/加载/错误状态和功耗范围前端校验。
+
+---
+
+## 质量门禁（2026-07-20 追加）
+
+在稳定基线之上接入自动化质量门禁，`mvn verify` 强制生效，不改动业务逻辑：
+
+- **Checkstyle 9.3**（`config/checkstyle/checkstyle.xml`）：文件末尾换行、禁 Tab、导入规范（UnusedImports/RedundantImport/AvoidStarImport）、行宽 ≤200。0 违规。
+  - 注意：`NewlineAtEndOfFile`/`FileTabCharacter`/`LineLength` 属 Checker 级；导入类检查属 TreeWalker 级，放错层级会报 "not allowed as a child/parent"。
+- **SpotBugs 4.8.6.4**（High 阈值）：0 bug。
+- **JaCoCo 0.8.12**：行覆盖门槛 60%，实际 95.3%。
+  - destfile 指向 `${java.io.tmpdir}/gamebench-jacoco.exec`，规避项目路径含空格（"GameBench Tracker"）导致 agent 写不出 exec 的假绿问题。
+  - surefire `argLine` 使用 `@{argLine}` 承接 JaCoCo agent。
+- **ArchUnit**（`architecture/ModuleBoundaryTest.java`）：声明式模块边界护栏——Controller 不直连 Mapper、common 不反向依赖 game、game 内不向上依赖 controller。
+
+测试合计 **65 通过 / 0 失败 / 0 错误**。
+
+### 门禁构建命令（项目路径含中文/空格，用临时本地仓库）
+```
+"C:/Program Files/Java/jdk-21.0.11/bin/java" -cp "C:/tools/maven-fixed/apache-maven-3.9.16/boot/plexus-classworlds-2.11.0.jar" -Dmaven.home=C:/tools/maven-fixed/apache-maven-3.9.16 -Dclassworlds.conf=C:/tools/maven-fixed/apache-maven-3.9.16/bin/m2.conf "-Dmaven.multiModuleProjectDirectory=G:/桌面/CODE/GameBench Tracker" -Dmaven.repo.local=C:/Users/34759/AppData/Local/Temp/gamebench-m2 org.codehaus.plexus.classworlds.launcher.Launcher -B verify
+```

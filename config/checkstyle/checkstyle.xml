@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+        "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+        "https://checkstyle.org/dtds/configuration_1_3.dtd">
+<!--
+  GameBench Tracker 编码规范（宽松但有效）。
+  目标：拦截真正影响质量的低级问题，不因风格细节阻断交付。
+  规则集：文件级基础规范 + 导入规范 + 行宽护栏。
+  注意：文件级检查（NewlineAtEndOfFile/FileTabCharacter）放 Checker 下；
+        语法级检查（导入/行宽）必须放 TreeWalker 下。
+-->
+<module name="Checker">
+    <property name="severity" value="error"/>
+    <property name="fileExtensions" value="java"/>
+
+    <!-- 文件级基础规范 -->
+    <module name="NewlineAtEndOfFile"/>
+    <module name="FileTabCharacter"/>
+
+    <!-- 行宽护栏（Checker 级）：超长行通常意味着可抽取，放宽到 200 避免误伤 -->
+    <module name="LineLength">
+        <property name="max" value="200"/>
+        <property name="ignorePattern"
+                  value="^package.*|^import.*|a href|href|http://|https://|ftp://"/>
+    </module>
+
+    <module name="TreeWalker">
+        <!-- 导入规范 -->
+        <module name="UnusedImports"/>
+        <module name="RedundantImport"/>
+        <module name="AvoidStarImport"/>
+    </module>
+</module>
