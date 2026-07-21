@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from "vue";
+import { computed, onMounted, onUnmounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { request } from "./api";
+import * as echarts from "echarts";
 
 interface Game {
   id: number;
@@ -182,6 +183,11 @@ const compareRecords = ref<BenchmarkRecord[]>([]);
 const compareBaseId = ref<number | null>(null);
 const compareTargetId = ref<number | null>(null);
 const compareResult = ref<RecordCompareResponse | null>(null);
+
+const chartVisible = ref(false);
+const chartRef = ref<HTMLElement | null>(null);
+const chartMetric = ref<"avg" | "min" | "gpuPower" | "gpuTemp">("avg");
+let chartInstance: echarts.ECharts | null = null;
 
 const dialogTitle = computed(() => editingId.value === null ? "新增游戏" : "编辑游戏");
 const sceneDialogTitle = computed(() => editingSceneId.value === null ? "新增测试场景" : "编辑测试场景");
@@ -751,7 +757,106 @@ function deltaClass(row: CompareRow): string {
   return good ? "delta-good" : "delta-bad";
 }
 
-onMounted(loadGames);
+function openChart(): void {
+  if (records.value.length === 0) return;
+  chartVisible.value = true;
+}
+
+type ChartMetric = "avg" | "min" | "gpuPower" | "gpuTemp";
+
+function metricMeta(metric: ChartMetric): { key: keyof BenchmarkRecord; name: string; unit: string } {
+  switch (metric) {
+    case "avg": return { key: "avgFps", name: "平均FPS", unit: "FPS" };
+    case "min": return { key: "minFps", name: "最低FPS", unit: "FPS" };
+    case "gpuPower": return { key: "gpuPowerWatt", name: "GPU功耗", unit: "W" };
+    case "gpuTemp": return { key: "gpuTempCelsius", name: "GPU温度", unit: "℃" };
+  }
+}
+
+function renderChart(): void {
+  if (chartRef.value === null) return;
+  if (chartInstance === null) {
+    chartInstance = echarts.init(chartRef.value);
+  }
+  const meta = metricMeta(chartMetric.value);
+  const sorted = [...records.value].sort((a, b) => (a.recordedAt ?? "").localeCompare(b.recordedAt ?? ""));
+  const labels = sorted.map(r => r.recordedAt || `未记录#${r.id}`);
+  const values = sorted.map(r => {
+    const value = r[meta.key];
+    return typeof value === "number" ? value : null;
+  });
+  chartInstance.setOption({
+    tooltip: { trigger: "axis" },
+    grid: { left: 52, right: 24, top: 48, bottom: 64 },
+    xAxis: {
+      type: "category",
+      data: labels,
+      axisLabel: { rotate: 30, color: "#9aa4b2" },
+      axisLine: { lineStyle: { color: "rgba(255,255,255,0.2)" } }
+    },
+    yAxis: {
+      type: "value",
+      name: meta.unit,
+      nameTextStyle: { color: "#9aa4b2" },
+      axisLabel: { color: "#9aa4b2" },
+      splitLine: { lineStyle: { color: "rgba(255,255,255,0.08)" } }
+    },
+    series: [{
+      name: meta.name,
+      type: "line",
+      smooth: true,
+      data: values,
+      itemStyle: { color: "#22d3ee" },
+      lineStyle: { color: "#22d3ee", width: 2 },
+      areaStyle: { color: "rgba(34,211,238,0.15)" }
+    }]
+  }, true);
+}
+
+function disposeChart(): void {
+  if (chartInstance !== null) {
+    chartInstance.dispose();
+    chartInstance = null;
+  }
+}
+
+function handleResize(): void {
+  chartInstance?.resize();
+}
+
+async function exportCsv(): Promise<void> {
+  if (selectedGame.value === null) return;
+  try {
+    const resp = await fetch(`/api/games/${selectedGame.value.id}/records/export`);
+    if (!resp.ok) {
+      const payload = await resp.json().catch(() => null) as { error?: { message?: string } } | null;
+      ElMessage.error(payload?.error?.message ?? "导出失败");
+      return;
+    }
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `benchmark-records-game-${selectedGame.value.id}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    ElMessage.success("CSV 已导出");
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : "导出失败");
+  }
+}
+
+onMounted(() => {
+  loadGames();
+  window.addEventListener("resize", handleResize);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("resize", handleResize);
+  disposeChart();
+});
 </script>
 
 <template>
@@ -885,6 +990,8 @@ onMounted(loadGames);
           <p>记录并回顾 {{ selectedGame.platform || "未填写平台" }} 的实测性能数据。</p>
         </div>
         <div class="hero-actions">
+          <el-button :disabled="recordSubmitting || records.length === 0" @click="openChart">趋势图表</el-button>
+          <el-button :disabled="recordSubmitting || records.length === 0" @click="exportCsv">导出 CSV</el-button>
           <el-button :disabled="recordSubmitting" @click="returnToGames">返回游戏</el-button>
           <el-button type="primary" size="large" :disabled="recordSubmitting" @click="openRecordCreate">新增记录</el-button>
         </div>
@@ -927,6 +1034,19 @@ onMounted(loadGames);
           </el-table-column>
         </el-table>
       </section>
+
+      <el-dialog v-model="chartVisible" title="性能趋势" width="880px" :close-on-click-modal="true" @opened="renderChart" @closed="disposeChart">
+        <div v-show="records.length > 0" ref="chartRef" class="chart-canvas"></div>
+        <div v-if="records.length === 0" class="empty-hint">暂无记录可绘制趋势。</div>
+        <template #footer>
+          <el-radio-group v-model="chartMetric" @change="renderChart">
+            <el-radio-button value="avg">平均FPS</el-radio-button>
+            <el-radio-button value="min">最低FPS</el-radio-button>
+            <el-radio-button value="gpuPower">GPU功耗</el-radio-button>
+            <el-radio-button value="gpuTemp">GPU温度</el-radio-button>
+          </el-radio-group>
+        </template>
+      </el-dialog>
     </template>
 
     <template v-else-if="view === 'compare' && selectedGame !== null">

@@ -169,6 +169,37 @@ public class BenchmarkRecordService {
         LOGGER.info("删除性能记录完成, id: {}", id);
     }
 
+    public String exportRecordsCsv(Long gameId) {
+        /*
+         * ========================================================================
+         * 步骤6：导出性能记录 CSV
+         * ========================================================================
+         * 目标：将指定游戏的全部性能记录导出为 CSV 文本，供前端直接下载。
+         * 数据源：SQLite benchmark_record 表。
+         * 操作：
+         * 1) 校验游戏存在（不存在统一转 GAME_NOT_FOUND）。
+         * 2) 按测试时间升序查询，便于趋势阅读。
+         * 3) 组装含表头与 UTF-8 BOM 的标准 CSV，特殊字符按 RFC 4180 转义。
+         */
+        LOGGER.info("开始导出性能记录 CSV, gameId: {}", gameId);
+
+        // 6.1 不存在游戏直接失败，避免导出空壳。
+        requireGame(gameId);
+
+        // 6.2 按测试时间升序读取该游戏全部记录。
+        List<BenchmarkRecordResponse> responses = benchmarkRecordMapper.selectList(
+                        new LambdaQueryWrapper<BenchmarkRecord>()
+                                .eq(BenchmarkRecord::getGameId, gameId)
+                                .orderByAsc(BenchmarkRecord::getRecordedAt))
+                .stream()
+                .map(this::toResponse)
+                .toList();
+
+        String csv = buildCsv(responses);
+        LOGGER.info("导出性能记录 CSV 完成, gameId: {}, count: {}", gameId, responses.size());
+        return csv;
+    }
+
     public RecordCompareResponse compare(RecordCompareRequest request) {
         /*
          * ========================================================================
@@ -244,6 +275,43 @@ public class BenchmarkRecordService {
             return null;
         }
         return fps.divide(power, 2, RoundingMode.HALF_UP);
+    }
+
+    private static final String[] CSV_HEADER = {
+            "记录ID", "场景ID", "模板ID", "测试时间", "平均FPS", "最低FPS", "帧时间(ms)",
+            "GPU温度(℃)", "CPU温度(℃)", "GPU功耗(W)", "CPU占用(%)", "备注"
+    };
+
+    private String buildCsv(List<BenchmarkRecordResponse> records) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.join(",", CSV_HEADER)).append("\r\n");
+        for (BenchmarkRecordResponse r : records) {
+            sb.append(csvField(r.id())).append(",");
+            sb.append(csvField(r.sceneId())).append(",");
+            sb.append(csvField(r.templateId())).append(",");
+            sb.append(csvField(r.recordedAt())).append(",");
+            sb.append(csvField(r.avgFps())).append(",");
+            sb.append(csvField(r.minFps())).append(",");
+            sb.append(csvField(r.frameTimeMs())).append(",");
+            sb.append(csvField(r.gpuTempCelsius())).append(",");
+            sb.append(csvField(r.cpuTempCelsius())).append(",");
+            sb.append(csvField(r.gpuPowerWatt())).append(",");
+            sb.append(csvField(r.cpuUsagePercent())).append(",");
+            sb.append(csvField(r.notes()));
+            sb.append("\r\n");
+        }
+        return sb.toString();
+    }
+
+    private String csvField(Object value) {
+        String text = value == null ? "" : value.toString();
+        if (text.isEmpty()) {
+            return "";
+        }
+        if (text.contains(",") || text.contains("\"") || text.contains("\n") || text.contains("\r")) {
+            return "\"" + text.replace("\"", "\"\"") + "\"";
+        }
+        return text;
     }
 
     private Game requireGame(Long gameId) {

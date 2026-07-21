@@ -14,6 +14,8 @@ h1 { margin: 0; font-size: clamp(32px, 5vw, 52px); letter-spacing: -.04em; }
 @media (max-width: 640px) { .page-shell { padding: 30px 14px; } .hero { align-items: start; flex-direction: column; } .toolbar { max-width: none; } }
 .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
 .duration-input { width: 180px; }
+.chart-canvas { width: 100%; height: 420px; }
+.empty-hint { padding: 56px 0; text-align: center; color: #9aa4b2; font-size: 14px; }
 .compare-picker { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
 .compare-select { width: 320px; }
 .delta-good { color: #4ade80; font-weight: 600; }

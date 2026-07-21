@@ -8,7 +8,9 @@ import com.gamebench.tracker.game.vo.BenchmarkRecordResponse;
 import com.gamebench.tracker.game.vo.RecordCompareResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,6 +42,16 @@ public class BenchmarkRecordController {
     @GetMapping("/api/games/{gameId}/records")
     public ApiResponse<List<BenchmarkRecordResponse>> listByGameId(@PathVariable @Min(1) Long gameId) {
         return ApiResponse.success(benchmarkRecordService.listByGameId(gameId));
+    }
+
+    @GetMapping(value = "/api/games/{gameId}/records/export", produces = MediaType.TEXT_PLAIN_VALUE + ";charset=utf-8")
+    public ResponseEntity<String> exportCsv(@PathVariable @Min(1) Long gameId) {
+        String csv = benchmarkRecordService.exportRecordsCsv(gameId);
+        String filename = "benchmark-records-game-" + gameId + ".csv";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .header(HttpHeaders.CACHE_CONTROL, "no-cache")
+                .body("\uFEFF" + csv);
     }
 
     @GetMapping("/api/records/{id}")

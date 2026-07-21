@@ -54,9 +54,9 @@
 - `common/api`：统一成功和失败响应。
 - `common/error`：通用错误码、`GAME_NOT_FOUND`、`SCENE_NOT_FOUND`、`TEMPLATE_NOT_FOUND`、`RECORD_NOT_FOUND`。
 - `common/exception`、`common/web`：应用异常、HTTP 映射和全局异常处理。
-- `game`：游戏、测试场景、配置模板、性能记录与双记录对比的 Controller、Service、Mapper、Entity、DTO、VO。
+- `game`：游戏、测试场景、配置模板、性能记录、双记录对比与 CSV 导出的 Controller、Service、Mapper、Entity、DTO、VO。
 - `schema.sql`：`game`、`test_scene`、`config_template` 与 `benchmark_record` 表、索引和关联约束。
-- `frontend`：游戏搜索、新增、编辑、删除和按游戏管理测试场景、配置模板、性能记录，以及双记录对比。
+- `frontend`：游戏搜索、新增、编辑、删除和按游戏管理测试场景、配置模板、性能记录，以及双记录对比、趋势图表（ECharts）与 CSV 导出。
 
 ## 当前数据流
 
@@ -87,7 +87,12 @@
   -> SQLite benchmark_record
 ```
 
-性能记录与双记录对比已实现。图表和 CSV 导出仍未实现。
+导出页面
+  -> /api/games/{gameId}/records/export
+  -> BenchmarkRecordController -> BenchmarkRecordService -> BenchmarkRecordMapper
+  -> SQLite benchmark_record (导出 CSV 文本)
+
+性能记录、双记录对比、CSV 导出与趋势图表均已实现。
 
 ## 配置模板后端文件
 

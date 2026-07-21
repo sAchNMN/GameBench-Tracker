@@ -257,7 +257,7 @@ GlobalExceptionHandler 已通过 MockMvc 验证以下处理：
 
 ## 已实现：性能记录接口
 
-性能记录接口已实现（后端 `BenchmarkRecordController` + 前端测试记录页面）。双记录对比与 CSV 导出仍待实现（见下）。
+性能记录接口、双记录对比接口与 CSV 导出接口均已实现（见下）。
 
 ## 测试记录接口
 
@@ -361,32 +361,24 @@ GlobalExceptionHandler 已通过 MockMvc 验证以下处理：
 
 
 
-## CSV 导出接口
+## 已实现：CSV 导出接口
 
 
 
 ### 测试记录导出
 
 - 方法：GET
-- URL：`/api/export/benchmark-records.csv`
-- Query：`gameId`、`sceneId`
-- 成功：200
-- 页面：CSV 导出
+- URL：`/api/games/{gameId}/records/export`
+- Path：`gameId`
+- 成功：200，响应体为 CSV 文本，Content-Type `text/csv;charset=utf-8`，响应头 `Content-Disposition: attachment; filename="benchmark-records-game-{gameId}.csv"`
+- 失败：404（`GAME_NOT_FOUND`）
+- 页面：测试记录管理（「导出 CSV」按钮，前端 fetch + Blob 触发浏览器下载）
 
+说明：
 
-
-### 双记录对比导出
-
-- 方法：GET
-- URL：`/api/export/compare.csv`
-- Query：`baseRecordId`、`targetRecordId`
-- 成功：200
-- 页面：双记录对比
-
-CSV 要求：
-
-- UTF-8 with BOM。
-- CRLF 换行。
-- 空值输出空单元格。
-- 数值不带单位。
-- 小数默认保留 2 位。
+- 按 `recordedAt` 升序导出该游戏下全部记录，便于趋势阅读。
+- CSV 以 UTF-8 BOM 开头（Excel 友好），CRLF 换行。
+- 表头（12 列）：记录ID、场景ID、模板ID、测试时间、平均FPS、最低FPS、帧时间(ms)、GPU温度(℃)、CPU温度(℃)、GPU功耗(W)、CPU占用(%)、备注。
+- 数值字段使用数据库原始值（如 `120.00`），不带单位；空值输出为空单元格。
+- 字段含逗号、双引号或半角换行时按 RFC 4180 用双引号包裹，内部双引号转义为两个双引号。
+- 游戏下无记录时只返回表头行。
