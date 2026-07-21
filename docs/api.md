@@ -215,7 +215,7 @@ GlobalExceptionHandler 已通过 MockMvc 验证以下处理：
 - Path：`gameId`
 - 成功：200
 - 失败：404
-- 页面：待实现
+- 页面：配置模板管理
 
 ### 新增模板
 
@@ -226,7 +226,7 @@ GlobalExceptionHandler 已通过 MockMvc 验证以下处理：
 - 校验：`gpu_power_limit_percent` 允许 -100 到 100；频率和电压只能为空或非负数
 - 成功：201
 - 失败：400、404、409
-- 页面：待实现
+- 页面：配置模板管理
 
 ### 模板详情
 
@@ -243,7 +243,7 @@ GlobalExceptionHandler 已通过 MockMvc 验证以下处理：
 - 校验：`gpu_power_limit_percent` 允许 -100 到 100
 - 成功：200
 - 失败：400、404、409
-- 页面：待实现
+- 页面：配置模板管理
 
 ### 删除模板
 
@@ -251,69 +251,74 @@ GlobalExceptionHandler 已通过 MockMvc 验证以下处理：
 - URL：`/api/config-templates/{id}`
 - 成功：200
 - 失败：404
-- 页面：待实现
+- 页面：配置模板管理
 
 模板字段包括名称、分辨率、图形预设、缩放、VSync、帧生成、GPU 核心/显存频率、电压、功耗限制、驱动和说明。模板名称在同一游戏内唯一。删除游戏会级联删除模板；删除模板不改变未来历史记录，`config_template_id` 只用于记录来源。
 
-## 规划接口（未实现）
+## 已实现：性能记录接口
 
-性能记录、对比和 CSV 尚未创建 Controller。以下契约保留为后续阶段规范。
+性能记录接口已实现（后端 `BenchmarkRecordController` + 前端测试记录页面）。双记录对比与 CSV 导出仍待实现（见下）。
 
 ## 测试记录接口
 
 ### 记录列表
 
 - 方法：GET
-- URL：`/api/benchmark-records`
-- Query：`gameId`、`sceneId`、`page`、`size`、`sort`
-- 成功：200
-- 页面：测试记录列表
-
-
+- URL：`/api/games/{gameId}/records`
+- Path：`gameId`
+- 成功：200，返回该游戏下记录数组（按 id 倒序）
+- 失败：404
+- 页面：测试记录管理
 
 ### 新增记录
 
 - 方法：POST
-- URL：`/api/benchmark-records`
-- 必填：`gameId`、`sceneId`、`testDate`、`resolution`、`graphicsPreset`、`averageFps`
-- 校验：`averageFps > 0`
-- 校验：其他 FPS 指标为空或大于等于 0
-- 校验：`gpu_power_limit_percent` 允许 -100 到 100
+- URL：`/api/games/{gameId}/records`
+- Path：`gameId`
+- 请求体（BenchmarkRecordSaveRequest）：
+  - `sceneId`：可选（前端必填），引用 `test_scene`。
+  - `templateId`：可选，引用 `config_template`，仅记录来源。
+  - `recordedAt`：可选，测试时间字符串。
+  - `avgFps`：必填，大于 0。
+  - `minFps`：必填，大于 0。
+  - `frameTimeMs`：必填，大于 0。
+  - `gpuTempCelsius`：可选，≥ -273.15。
+  - `cpuTempCelsius`：可选，≥ -273.15。
+  - `gpuPowerWatt`：可选，≥ 0。
+  - `cpuUsagePercent`：可选，0–100。
+  - `notes`：可选。
 - 成功：201
+- 失败：400、404（GAME_NOT_FOUND / SCENE_NOT_FOUND / TEMPLATE_NOT_FOUND）
 - 页面：新增测试记录
 
-新增记录时，Service 必须校验场景存在且属于所选游戏，并复制场景快照。
-
-
+说明：后端仅保存 `sceneId`/`templateId` 引用，不复制场景/模板字段快照；前端按 id 实时拉取名称展示。
 
 ### 记录详情
 
 - 方法：GET
-- URL：`/api/benchmark-records/{id}`
+- URL：`/api/records/{id}`
 - 成功：200
 - 失败：404
-- 页面：测试记录详情、编辑测试记录
-
-
+- 页面：编辑测试记录
 
 ### 编辑记录
 
 - 方法：PUT
-- URL：`/api/benchmark-records/{id}`
-- 校验：同新增记录
+- URL：`/api/records/{id}`
+- 请求体：同新增记录
 - 成功：200
+- 失败：400、404
 - 页面：编辑测试记录
 
-编辑历史记录用于修正录入错误。编辑后更新 `updated_at`。前端必须提示正在修改历史测试数据。
-
-
+编辑历史记录用于修正录入错误。编辑后更新 `updatedAt`，不改变所属游戏。前端必须提示正在修改历史测试数据。
 
 ### 删除记录
 
 - 方法：DELETE
-- URL：`/api/benchmark-records/{id}`
+- URL：`/api/records/{id}`
 - 成功：200
-- 页面：测试记录列表
+- 失败：404
+- 页面：测试记录管理
 
 
 
