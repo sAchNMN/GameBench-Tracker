@@ -322,7 +322,7 @@ GlobalExceptionHandler 已通过 MockMvc 验证以下处理：
 
 
 
-## 双记录对比接口
+## 已实现：双记录对比接口
 
 
 
@@ -330,28 +330,34 @@ GlobalExceptionHandler 已通过 MockMvc 验证以下处理：
 
 - 方法：POST
 - URL：`/api/benchmark-records/compare`
-- 请求体：`baseRecordId`、`targetRecordId`
-- 成功：200
-- 失败：400、404、409
+- 请求体（RecordCompareRequest）：`baseRecordId`、`targetRecordId`，均必填且为正数。
+- 成功：200，返回 `RecordCompareResponse`。
+- 失败：400（参数校验）、404（`RECORD_NOT_FOUND`）、409（`CONFLICT`）。
 - 页面：双记录对比
 
 校验：
 
-- 两条记录必须存在。
-- 两条记录必须属于同一个游戏。
-- 旧值为空或 0 时，不计算变化率。
-- 功耗为空或 0 时，不计算 FPS/W。
+- 两条记录必须存在，否则 `RECORD_NOT_FOUND`。
+- 两条记录必须属于同一游戏，否则 `CONFLICT`。
+- 两条记录不能为同一条，否则 `CONFLICT`。
+- base 值为空或 0 时，对应变化率返回 null。
+- 功耗为空或 0 时，FPS/W 返回 null。
 
-必须返回：
+返回字段（RecordCompareResponse）：
 
-- 平均 FPS 变化率。
-- 1% Low 变化率。
-- 0.1% Low 变化率。
-- GPU 功耗变化率。
-- GPU 功耗下降率。
-- GPU 温度差异。
-- GPU 热点温度差异。
-- FPS/W。
+- `base`、`target`：两条记录的完整快照（`BenchmarkRecordResponse`）。
+- `avgFpsChangeRate`：平均 FPS 变化率（%）。
+- `minFpsChangeRate`：最低帧率变化率（%）。
+- `frameTimeMsChangeRate`：帧时间变化率（%）。
+- `gpuPowerChangeRate`：GPU 功耗变化率（%）。
+- `gpuPowerDropRate`：GPU 功耗下降率（%，等于功耗变化率取负）。
+- `gpuTempDiff`：GPU 温度差异（℃）。
+- `cpuTempDiff`：CPU 温度差异（℃）。
+- `cpuUsageDiff`：CPU 占用差异（%）。
+- `baseFpsPerWatt`、`targetFpsPerWatt`：基线/目标 FPS/W。
+- `fpsPerWattChangeRate`：FPS/W 变化率（%）。
+
+变化率 = (target - base) / base * 100，保留 2 位小数；差异 = target - base，保留 2 位小数。
 
 
 

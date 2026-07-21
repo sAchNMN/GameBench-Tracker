@@ -2,8 +2,10 @@ package com.gamebench.tracker.game.controller;
 
 import com.gamebench.tracker.common.api.ApiResponse;
 import com.gamebench.tracker.game.dto.BenchmarkRecordSaveRequest;
+import com.gamebench.tracker.game.dto.RecordCompareRequest;
 import com.gamebench.tracker.game.service.BenchmarkRecordService;
 import com.gamebench.tracker.game.vo.BenchmarkRecordResponse;
+import com.gamebench.tracker.game.vo.RecordCompareResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import org.springframework.http.HttpStatus;
@@ -56,5 +58,10 @@ public class BenchmarkRecordController {
     public ApiResponse<Void> delete(@PathVariable @Min(1) Long id) {
         benchmarkRecordService.delete(id);
         return ApiResponse.success(null);
+    }
+
+    @PostMapping("/api/benchmark-records/compare")
+    public ApiResponse<RecordCompareResponse> compare(@Valid @RequestBody RecordCompareRequest request) {
+        return ApiResponse.success(benchmarkRecordService.compare(request));
     }
 }

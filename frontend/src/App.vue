@@ -68,7 +68,23 @@ interface BenchmarkRecord {
   updatedAt: string;
 }
 
-const view = ref<"games" | "scenes" | "templates" | "records">("games");
+interface RecordCompareResponse {
+  base: BenchmarkRecord;
+  target: BenchmarkRecord;
+  avgFpsChangeRate: number | null;
+  minFpsChangeRate: number | null;
+  frameTimeMsChangeRate: number | null;
+  gpuPowerChangeRate: number | null;
+  gpuPowerDropRate: number | null;
+  gpuTempDiff: number | null;
+  cpuTempDiff: number | null;
+  cpuUsageDiff: number | null;
+  baseFpsPerWatt: number | null;
+  targetFpsPerWatt: number | null;
+  fpsPerWattChangeRate: number | null;
+}
+
+const view = ref<"games" | "scenes" | "templates" | "records" | "compare">("games");
 const loading = ref(false);
 const submitting = ref(false);
 const dialogVisible = ref(false);
@@ -160,6 +176,12 @@ const recordForm = reactive<{
   frameTimeMs: null,
   notes: ""
 });
+
+const compareLoading = ref(false);
+const compareRecords = ref<BenchmarkRecord[]>([]);
+const compareBaseId = ref<number | null>(null);
+const compareTargetId = ref<number | null>(null);
+const compareResult = ref<RecordCompareResponse | null>(null);
 
 const dialogTitle = computed(() => editingId.value === null ? "新增游戏" : "编辑游戏");
 const sceneDialogTitle = computed(() => editingSceneId.value === null ? "新增测试场景" : "编辑测试场景");
@@ -264,6 +286,10 @@ function returnToGames(): void {
   records.value = [];
   recordScenes.value = [];
   recordTemplates.value = [];
+  compareRecords.value = [];
+  compareBaseId.value = null;
+  compareTargetId.value = null;
+  compareResult.value = null;
 }
 
 async function loadScenes(): Promise<void> {
@@ -636,6 +662,95 @@ function formatValue(value: number | null | undefined): string {
   return value === null || value === undefined ? "-" : String(value);
 }
 
+interface CompareRow {
+  label: string;
+  base: string;
+  target: string;
+  deltaText: string;
+  deltaValue: number | null;
+  goodWhenUp: boolean;
+}
+
+async function openCompare(game: Game): Promise<void> {
+  selectedGame.value = game;
+  view.value = "compare";
+  compareResult.value = null;
+  compareBaseId.value = null;
+  compareTargetId.value = null;
+  await Promise.all([loadCompareRecords(), loadRecordScenes()]);
+}
+
+async function loadCompareRecords(): Promise<void> {
+  if (selectedGame.value === null) return;
+  compareLoading.value = true;
+  try {
+    compareRecords.value = await request<BenchmarkRecord[]>(`/api/games/${selectedGame.value.id}/records`);
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : "加载测试记录失败");
+  } finally {
+    compareLoading.value = false;
+  }
+}
+
+function recordLabel(r: BenchmarkRecord): string {
+  return `#${r.id} · ${sceneName(r.sceneId)} · ${r.recordedAt || "未记录"} · ${r.avgFps}FPS`;
+}
+
+async function runCompare(): Promise<void> {
+  if (compareBaseId.value === null || compareTargetId.value === null) {
+    ElMessage.warning("请选择两条记录");
+    return;
+  }
+  if (compareBaseId.value === compareTargetId.value) {
+    ElMessage.warning("请选择两条不同的记录");
+    return;
+  }
+  compareLoading.value = true;
+  try {
+    const body = JSON.stringify({ baseRecordId: compareBaseId.value, targetRecordId: compareTargetId.value });
+    compareResult.value = await request<RecordCompareResponse>("/api/benchmark-records/compare", { method: "POST", body });
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : "对比失败");
+  } finally {
+    compareLoading.value = false;
+  }
+}
+
+function fmtNum(value: number | null | undefined): string {
+  return value === null || value === undefined ? "-" : String(value);
+}
+
+function fmtRate(value: number | null): string {
+  return value === null ? "-" : `${value > 0 ? "+" : ""}${value}%`;
+}
+
+function fmtDiff(value: number | null): string {
+  return value === null ? "-" : `${value > 0 ? "+" : ""}${value}`;
+}
+
+const compareRows = computed<CompareRow[]>(() => {
+  const r = compareResult.value;
+  if (r === null) return [];
+  return [
+    { label: "平均FPS", base: fmtNum(r.base.avgFps), target: fmtNum(r.target.avgFps), deltaText: fmtRate(r.avgFpsChangeRate), deltaValue: r.avgFpsChangeRate, goodWhenUp: true },
+    { label: "最低FPS", base: fmtNum(r.base.minFps), target: fmtNum(r.target.minFps), deltaText: fmtRate(r.minFpsChangeRate), deltaValue: r.minFpsChangeRate, goodWhenUp: true },
+    { label: "帧时间(ms)", base: fmtNum(r.base.frameTimeMs), target: fmtNum(r.target.frameTimeMs), deltaText: fmtRate(r.frameTimeMsChangeRate), deltaValue: r.frameTimeMsChangeRate, goodWhenUp: false },
+    { label: "GPU功耗(W)", base: fmtNum(r.base.gpuPowerWatt), target: fmtNum(r.target.gpuPowerWatt), deltaText: fmtRate(r.gpuPowerChangeRate), deltaValue: r.gpuPowerChangeRate, goodWhenUp: false },
+    { label: "功耗下降率", base: "-", target: "-", deltaText: fmtRate(r.gpuPowerDropRate), deltaValue: r.gpuPowerDropRate, goodWhenUp: true },
+    { label: "GPU温度(℃)", base: fmtNum(r.base.gpuTempCelsius), target: fmtNum(r.target.gpuTempCelsius), deltaText: fmtDiff(r.gpuTempDiff), deltaValue: r.gpuTempDiff, goodWhenUp: false },
+    { label: "CPU温度(℃)", base: fmtNum(r.base.cpuTempCelsius), target: fmtNum(r.target.cpuTempCelsius), deltaText: fmtDiff(r.cpuTempDiff), deltaValue: r.cpuTempDiff, goodWhenUp: false },
+    { label: "CPU占用(%)", base: fmtNum(r.base.cpuUsagePercent), target: fmtNum(r.target.cpuUsagePercent), deltaText: fmtDiff(r.cpuUsageDiff), deltaValue: r.cpuUsageDiff, goodWhenUp: false },
+    { label: "FPS/W", base: fmtNum(r.baseFpsPerWatt), target: fmtNum(r.targetFpsPerWatt), deltaText: fmtRate(r.fpsPerWattChangeRate), deltaValue: r.fpsPerWattChangeRate, goodWhenUp: true }
+  ];
+});
+
+function deltaClass(row: CompareRow): string {
+  if (row.deltaValue === null) return "delta-none";
+  const positive = row.deltaValue > 0;
+  const good = row.goodWhenUp ? positive : !positive;
+  return good ? "delta-good" : "delta-bad";
+}
+
 onMounted(loadGames);
 </script>
 
@@ -673,6 +788,7 @@ onMounted(loadGames);
               <el-button link type="primary" :disabled="submitting" @click="openScenes(scope.row)">场景</el-button>
               <el-button link type="primary" :disabled="submitting" @click="openTemplates(scope.row)">模板</el-button>
               <el-button link type="primary" :disabled="submitting" @click="openRecords(scope.row)">记录</el-button>
+              <el-button link type="primary" :disabled="submitting" @click="openCompare(scope.row)">对比</el-button>
               <el-button link type="primary" :disabled="submitting" @click="openEdit(scope.row)">编辑</el-button>
               <el-button link type="danger" :disabled="submitting" @click="removeGame(scope.row)">删除</el-button>
             </template>
@@ -807,6 +923,58 @@ onMounted(loadGames);
             <template #default="scope">
               <el-button link type="primary" :disabled="recordSubmitting" @click="openRecordEdit(scope.row)">编辑</el-button>
               <el-button link type="danger" :disabled="recordSubmitting" @click="removeRecord(scope.row)">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </section>
+    </template>
+
+    <template v-else-if="view === 'compare' && selectedGame !== null">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">RECORD COMPARISON</p>
+          <h1>{{ selectedGame.name }}</h1>
+          <p>对比同一游戏下两条测试记录的性能差异。</p>
+        </div>
+        <div class="hero-actions">
+          <el-button :disabled="compareLoading" @click="returnToGames">返回游戏</el-button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="compare-picker">
+          <el-form label-position="top" inline>
+            <el-form-item label="基线记录">
+              <el-select v-model="compareBaseId" :disabled="compareLoading" placeholder="选择基线记录" filterable class="compare-select">
+                <el-option v-for="r in compareRecords" :key="r.id" :label="recordLabel(r)" :value="r.id" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="目标记录">
+              <el-select v-model="compareTargetId" :disabled="compareLoading" placeholder="选择目标记录" filterable class="compare-select">
+                <el-option v-for="r in compareRecords" :key="r.id" :label="recordLabel(r)" :value="r.id" />
+              </el-select>
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" size="large" :loading="compareLoading"
+                :disabled="compareBaseId === null || compareTargetId === null || compareRecords.length < 2"
+                @click="runCompare">开始对比</el-button>
+            </el-form-item>
+          </el-form>
+        </div>
+      </section>
+
+      <section v-if="compareRecords.length > 0 && compareRecords.length < 2" class="panel">
+        <el-alert type="info" :closable="false" show-icon title="至少需要两条测试记录才能对比" />
+      </section>
+
+      <section v-if="compareResult !== null" class="panel">
+        <el-table :data="compareRows" border>
+          <el-table-column label="指标" prop="label" width="160" />
+          <el-table-column label="基线" prop="base" />
+          <el-table-column label="目标" prop="target" />
+          <el-table-column label="变化" min-width="120">
+            <template #default="scope">
+              <span :class="deltaClass(scope.row)">{{ scope.row.deltaText }}</span>
             </template>
           </el-table-column>
         </el-table>

@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.gamebench.tracker.common.error.ErrorCode;
 import com.gamebench.tracker.common.exception.ApplicationException;
 import com.gamebench.tracker.game.dto.BenchmarkRecordSaveRequest;
+import com.gamebench.tracker.game.dto.RecordCompareRequest;
 import com.gamebench.tracker.game.entity.BenchmarkRecord;
 import com.gamebench.tracker.game.entity.Game;
 import com.gamebench.tracker.game.mapper.BenchmarkRecordMapper;
@@ -12,10 +13,13 @@ import com.gamebench.tracker.game.mapper.ConfigTemplateMapper;
 import com.gamebench.tracker.game.mapper.GameMapper;
 import com.gamebench.tracker.game.mapper.TestSceneMapper;
 import com.gamebench.tracker.game.vo.BenchmarkRecordResponse;
+import com.gamebench.tracker.game.vo.RecordCompareResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.List;
 
@@ -23,6 +27,7 @@ import java.util.List;
 public class BenchmarkRecordService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BenchmarkRecordService.class);
+    private static final BigDecimal HUNDRED = new BigDecimal("100");
 
     private final GameMapper gameMapper;
     private final BenchmarkRecordMapper benchmarkRecordMapper;
@@ -162,6 +167,83 @@ public class BenchmarkRecordService {
         benchmarkRecordMapper.deleteById(id);
 
         LOGGER.info("删除性能记录完成, id: {}", id);
+    }
+
+    public RecordCompareResponse compare(RecordCompareRequest request) {
+        /*
+         * ========================================================================
+         * 步骤6：双记录对比
+         * ========================================================================
+         * 目标：对比同一游戏下两条性能记录的指标变化。
+         * 数据源：SQLite benchmark_record 表。
+         * 操作：
+         * 1) 校验两条记录存在、非同一条、且同属一游戏。
+         * 2) 计算 FPS / 帧时间变化率、功耗变化率与下降率、温度与占用差异、FPS/W 及其变化率。
+         * 3) base 值为空或 0 时对应变化率返回 null；功耗为空或 0 时 FPS/W 返回 null。
+         */
+        LOGGER.info("开始对比性能记录, baseId: {}, targetId: {}", request.baseRecordId(), request.targetRecordId());
+
+        // 6.1 同一条记录无法对比，统一按业务冲突拒绝。
+        if (request.baseRecordId().equals(request.targetRecordId())) {
+            throw new ApplicationException(ErrorCode.CONFLICT);
+        }
+
+        // 6.2 两条记录必须真实存在。
+        BenchmarkRecord base = requireRecord(request.baseRecordId());
+        BenchmarkRecord target = requireRecord(request.targetRecordId());
+
+        // 6.3 仅允许对比同一游戏下的记录，避免跨游戏混比。
+        if (!base.getGameId().equals(target.getGameId())) {
+            throw new ApplicationException(ErrorCode.CONFLICT);
+        }
+
+        // 6.4 计算各项变化率与差异，空值/零值由工具方法自行返回 null。
+        BigDecimal avgFpsChangeRate = changeRate(base.getAvgFps(), target.getAvgFps());
+        BigDecimal minFpsChangeRate = changeRate(base.getMinFps(), target.getMinFps());
+        BigDecimal frameTimeMsChangeRate = changeRate(base.getFrameTimeMs(), target.getFrameTimeMs());
+        BigDecimal gpuPowerChangeRate = changeRate(base.getGpuPowerWatt(), target.getGpuPowerWatt());
+        BigDecimal gpuPowerDropRate = gpuPowerChangeRate == null
+                ? null : gpuPowerChangeRate.negate().setScale(2, RoundingMode.HALF_UP);
+        BigDecimal gpuTempDiff = diff(base.getGpuTempCelsius(), target.getGpuTempCelsius());
+        BigDecimal cpuTempDiff = diff(base.getCpuTempCelsius(), target.getCpuTempCelsius());
+        BigDecimal cpuUsageDiff = diff(base.getCpuUsagePercent(), target.getCpuUsagePercent());
+        BigDecimal baseFpsPerWatt = fpsPerWatt(base.getAvgFps(), base.getGpuPowerWatt());
+        BigDecimal targetFpsPerWatt = fpsPerWatt(target.getAvgFps(), target.getGpuPowerWatt());
+        BigDecimal fpsPerWattChangeRate = changeRate(baseFpsPerWatt, targetFpsPerWatt);
+
+        RecordCompareResponse response = new RecordCompareResponse(
+                toResponse(base), toResponse(target),
+                avgFpsChangeRate, minFpsChangeRate, frameTimeMsChangeRate,
+                gpuPowerChangeRate, gpuPowerDropRate,
+                gpuTempDiff, cpuTempDiff, cpuUsageDiff,
+                baseFpsPerWatt, targetFpsPerWatt, fpsPerWattChangeRate);
+
+        LOGGER.info("对比性能记录完成, baseId: {}, targetId: {}", request.baseRecordId(), request.targetRecordId());
+        return response;
+    }
+
+    private BigDecimal changeRate(BigDecimal base, BigDecimal target) {
+        if (base == null || target == null || base.signum() == 0) {
+            return null;
+        }
+        return target.subtract(base)
+                .divide(base, 4, RoundingMode.HALF_UP)
+                .multiply(HUNDRED)
+                .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal diff(BigDecimal base, BigDecimal target) {
+        if (base == null || target == null) {
+            return null;
+        }
+        return target.subtract(base).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal fpsPerWatt(BigDecimal fps, BigDecimal power) {
+        if (fps == null || power == null || power.signum() == 0) {
+            return null;
+        }
+        return fps.divide(power, 2, RoundingMode.HALF_UP);
     }
 
     private Game requireGame(Long gameId) {
